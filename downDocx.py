@@ -5,6 +5,7 @@ import os
 import urllib2
 import json
 import sys
+import time
 reload(sys)
 sys.setdefaultencoding('utf-8')
 
@@ -18,6 +19,23 @@ import config
 import log
 
 logger = log.Log(config.log_dir, config.log_name)
+
+import types  
+  
+def json_get(json, l_key, default):  
+        ret = json  
+        for k in l_key:  
+                if type(k) is types.IntType:  
+                        if k < 0 : return default  
+                        if not (type(ret) is types.ListType): return default  
+                        if len(ret) <= k: return default  
+                elif type(k) is types.StringType:  
+                        if not (type(ret) is types.DictType): return default  
+                        if not ret.has_key(k): return default  
+                else:  
+                        return default  
+                ret = ret[k]  
+        return ret  
 
 class DownDocx(object):
 	def __init__(self, fileDir, url, info):
@@ -59,10 +77,12 @@ class DownDocx(object):
 			for item in jsonRet['body']:
 				if item['t'] != 'word':
 					continue
-				if first == 0 or (item['ps'] and item['ps']['_enter'] == 1):
+				#if first == 0 or (item['ps'] and item['ps']['_enter'] == 1):
+				if first == 0 or (item['ps'] and json_get(item, ['ps', '_enter'], '0') == 1):
 					first = 1
 					pg = document.add_paragraph()
-				if item['ps'] and item['ps']['_enter'] == 1:
+				#if item['ps'] and item['ps']['_enter'] == 1:
+				if item['ps'] and json_get(item, ['ps', '_enter'], '0') == 1:
 					continue
 				run = pg.add_run(item['c'])
 				# 添加格式；分析不出来，就统一宋体、五号
@@ -72,6 +92,8 @@ class DownDocx(object):
 			# 下一页
 			if i < self.WkInfo['totalPageNum']:
 				document.add_page_break()
+				print 'Page' + str(i)
+				#time.sleep(1)
 			i += 1
 		document.save(docFileName)
 		return True
